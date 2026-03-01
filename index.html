@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>ТРАНЗИТ — мобильный каталог (v14 PWA + XLSX + WhatsApp)</title>
+  <meta name="theme-color" content="#10b981">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <style>
+    :root {
+      --bg:#f6f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e5e7eb;
+      --accent:#10b981; --accent-weak:#d1fae5; --danger:#ef4444; --shadow:0 10px 24px rgba(2,6,23,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    button,input,textarea{font:inherit}
+    a{text-decoration:none;color:inherit}
+    .wrap{min-height:100dvh;display:block;padding:0}
+    .phone{width:100vw;height:100dvh;background:var(--bg);border:none;border-radius:0;box-shadow:none;overflow:hidden;position:relative}
+    :root{ --safe-bottom: env(safe-area-inset-bottom); }
+    .content{position:absolute;top:0;left:0;right:0;bottom:calc(64px + var(--safe-bottom));overflow:auto;-webkit-overflow-scrolling:touch;background:#fff}
+    .container{width:100%;max-width:360px;margin:0 auto;padding:0 16px}
+    .header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--border)}
+    .header-inner{height:56px;display:flex;align-items:center;gap:12px}
+    .logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.5px}
+    .logo-badge{width:26px;height:26px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:#fff;font-weight:900;box-shadow:0 6px 14px rgba(16,185,129,.35)}
+    .search{display:flex;gap:8px;align-items:center;margin:8px 0 12px}
+    .search-input{flex:1;border:1px solid var(--border);border-radius:14px;padding:12px 14px;background:#fff;outline:none}
+    .search-input::placeholder{color:var(--muted)}
+    .search-btn{border:1px solid var(--border);background:#fff;border-radius:14px;padding:12px 14px;cursor:pointer}
+    .promo{margin-top:8px;border:1px dashed #86efac;background:#ecfdf5;color:#065f46;border-radius:14px;padding:10px 12px;display:flex;align-items:center;gap:10px}
+    .promo .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+    .chips{display:flex;gap:8px;overflow:auto;padding-bottom:8px;margin-top:8px}
+    .chip{white-space:nowrap;border:1px solid var(--border);background:#fff;border-radius:999px;padding:8px 12px;font-size:13px;cursor:pointer;color:#64748b}
+    .chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 0 16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+    .thumb{width:100%;height:120px;background:#f1f5f9; background-size:cover;background-position:center;display:grid;place-items:center;font-size:42px}
+    .card-body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px}
+    .title{font-weight:600;font-size:14px;line-height:1.25;min-height:36px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .meta{display:flex;align-items:center;justify-content:space-between}
+    .price{font-weight:800}
+    .unit{font-size:12px;color:var(--muted)}
+    .badges{display:flex;gap:6px;margin-top:2px}
+    .badge{font-size:10px;padding:3px 8px;border-radius:999px}
+    .badge.low{background:#fff1f2;color:#be123c;border:1px solid #fecaca}
+    .badge.stock{background:var(--accent-weak);color:#065f46;border:1px solid #a7f3d0}
+    .qty{display:flex;align-items:center;gap:8px;margin-top:4px}
+    .qty .btn{width:36px;height:36px;border-radius:12px;border:1px solid var(--border);background:#fff;display:grid;place-items:center;cursor:pointer}
+    .qty input{width:54px;text-align:center;border:1px solid var(--border);border-radius:10px;padding:8px 6px}
+    .add-btn{margin-top:6px;border:none;background:var(--accent);color:#fff;border-radius:12px;padding:10px 12px;font-weight:700;cursor:pointer;box-shadow:0 6px 16px rgba(16,185,129,.3)}
+    .add-btn[disabled]{opacity:.5;cursor:not-allowed}
+    .empty{padding:24px 0;color:var(--muted);text-align:center}
+    .bottom{position:absolute;left:0;right:0;bottom:calc(64px + var(--safe-bottom));height:76px;background:#fff;border-top:1px solid var(--border);z-index:30;display:flex;align-items:center}
+    .bottom.hidden{display:none}
+    .summary{flex:1;display:flex;align-items:center;gap:10px;padding:0 16px}
+    .cart-badge{min-width:28px;height:28px;border-radius:10px;background:var(--accent-weak);display:grid;place-items:center;font-weight:800;color:#065f46}
+    .summary .txt{line-height:1.1}
+    .summary .total{font-weight:800}
+    .checkout-btn{margin-right:12px;border:none;background:var(--accent);color:#fff;border-radius:14px;padding:12px 16px;font-weight:800;cursor:pointer;box-shadow:0 10px 22px rgba(16,185,129,.35)}
+    .tabs{position:absolute;left:0;right:0;bottom:0;height:calc(64px + var(--safe-bottom));background:#fff;border-top:1px solid var(--border);z-index:40}
+    .tabs-inner{display:flex;height:64px;padding-bottom:var(--safe-bottom)}
+    .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#64748b;cursor:pointer}
+    .tab.active{color:var(--accent);font-weight:700}
+    .tab svg{width:20px;height:20px}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-end;justify-content:center;z-index:50}
+    .modal.open{display:flex}
+    .sheet{width:100%;max-width:390px;background:#fff;border-top-left-radius:20px;border-top-right-radius:20px;box-shadow:0 -10px 30px rgba(0,0,0,.25);padding:16px 16px 20px}
+    .sheet h3{margin:0;font-size:18px}
+    .text-input{width:100%;border:1px solid var(--border);border-radius:12px;padding:12px 12px;background:#fff;margin-top:6px}
+    .sheet .row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px dashed #f1f5f9}
+    .sheet .row:last-child{border-bottom:0}
+    .sheet .small{font-size:12px;color:var(--muted)}
+    .sheet .total-line{display:flex;justify-content:space-between;font-weight:800;margin-top:8px}
+    .sheet-actions{display:flex;gap:8px;margin-top:16px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:12px;padding:12px 14px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:#fff}
+    .btn-accent{background:var(--accent);border-color:var(--accent);color:#fff}
+    .list{padding:8px 0}
+    .line{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9}
+    .line:last-child{border-bottom:0}
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+    .pwa-tip{position:absolute;top:8px;right:8px;background:#111827;color:#fff;padding:6px 10px;border-radius:10px;font-size:12px;opacity:.9}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="phone">
+      <div id="app" class="content"></div>
+      <div id="bottom" class="bottom hidden">
+        <div class="summary">
+          <div class="cart-badge" id="cartCount">0</div>
+          <div class="txt">
+            <div class="small" style="color:var(--muted)">Сумма заказа</div>
+            <div class="total" id="cartTotal">0 ₸</div>
+          </div>
+        </div>
+        <button class="checkout-btn" id="btnCheckout">Оформить</button>
+      </div>
+      <div class="tabs" id="tabs">
+        <div class="tabs-inner">
+          <div class="tab active" data-tab="catalog" aria-label="Каталог">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <div>Каталог</div>
+          </div>
+          <div class="tab" data-tab="cart" aria-label="Корзина">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M3 4h2l2 12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2l1-7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <div>Корзина</div>
+          </div>
+          <div class="tab" data-tab="promos" aria-label="Акции">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l2.39 4.84L20 9.27l-3.91 3.81L17.78 20 12 16.9 6.22 20l1.69-6.92L4 9.27l5.61-1.43L12 3z" stroke="currentColor" stroke-width="2"/></svg>
+            <div>Акции</div>
+          </div>
+          <div class="tab" data-tab="profile" aria-label="Профиль">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-5 0-8 3-8 6v1h16v-1c0-3-3-6-8-6z" stroke="currentColor" stroke-width="2"/></svg>
+            <div>Профиль</div>
+          </div>
+        </div>
+      </div>
+      <div class="pwa-tip" id="installTip" style="display:none">Добавь на экран: ⋮ → «Установить приложение»</div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="sheet">
+      <h3>Оформление заявки</h3>
+      <div class="small" style="margin-top:6px">Мы свяжемся для подтверждения и согласования доставки.</div>
+      <div id="orderList" style="margin-top:10px"></div>
+      <div class="total-line"><span>Итого:</span> <span id="modalTotal">0 ₸</span></div>
+      <div class="small" style="margin-top:12px">Название магазина</div>
+      <input id="shopName" class="text-input" placeholder="Например: Market Ayan"/>
+      <div class="small" style="margin-top:10px">Контактный номер</div>
+      <input id="shopPhone" class="text-input" placeholder="+7 7XX XXX XX XX"/>
+      <div class="small" style="margin-top:10px">Комментарий к заказу</div>
+      <textarea id="shopComment" class="text-input" placeholder="Например: выгрузка завтра до 10:00" rows="2"></textarea>
+      <div class="sheet-actions">
+        <button id="btnCancel" class="btn" style="flex:1;">Отмена</button>
+        <button id="btnSend" class="btn btn-accent" style="flex:1;">Отправить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" style="position:fixed;left:50%;transform:translateX(-50%);bottom:96px;background:#111827;color:#fff;padding:10px 14px;border-radius:12px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;box-shadow:0 10px 20px rgba(0,0,0,.25);z-index:60">Готово</div>
+
+  <script>
+  // PWA registration + Install tip
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js');
+    });
+  }
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('installTip').style.display = 'block';
+  });
+
+  document.addEventListener('DOMContentLoaded', function(){
+    // ==== ДАННЫЕ ====
+    const DATA = [
+      {id:1,title:'Банан (вес тары ~ 1.3 кг)',unit:'кг',price:840,stock:198},
+      {id:2,title:'Виноград красный (вес тары ~ 1.0 кг)',unit:'кг',price:903,stock:17385},
+      {id:3,title:'Картофель 25 кг',unit:'мешок',price:6500,stock:12},
+      {id:4,title:'Лук 20 кг',unit:'мешок',price:5200,stock:8},
+      {id:5,title:'Морковь 20 кг',unit:'мешок',price:5800,stock:5}
+    ];
+    const OPERATOR = { whatsappPhone:'77020578107', email:'orders@example.com' };
+
+    // ==== STATE ====
+    let filtered = DATA.slice();
+    const cart = new Map();
+    let activeTab = 'catalog';
+    let activeChip = 'all';
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+    const fmt = n => (new Intl.NumberFormat('ru-KZ')).format(Math.round(n||0));
+    const toast = (t) => { const el = $('#toast'); el.textContent=t; el.style.opacity=1; el.style.transform='translateX(-50%) translateY(-4px)'; setTimeout(()=>{el.style.opacity=0; el.style.transform='translateX(-50%)'},1600); };
+    const app = $('#app');
+
+    function render(){ renderView(); bindTabs(); updateBottom(); }
+    function renderView(){ if(activeTab==='catalog') renderCatalog(); else if(activeTab==='cart') renderCart(); else if(activeTab==='promos') renderPromos(); else if(activeTab==='profile') renderProfile(); }
+    function bindTabs(){ $$('#tabs .tab').forEach(t => t.addEventListener('click', () => { activeTab=t.dataset.tab; $$('#tabs .tab').forEach(x=>x.classList.toggle('active', x===t)); renderView(); updateBottom(); })); }
+
+    function renderCatalog(){
+      app.innerHTML = `
+        <div class="header">
+          <div class="container">
+            <div class="header-inner">
+              <div class="logo">
+                <div class="logo-badge">T</div>
+                <div>ТРАНЗИТ<div class="small" style="color:var(--muted);font-weight:500">Оптовый каталог</div></div>
+              </div>
+            </div>
+            <div class="promo">
+              <div class="dot"></div>
+              <div><b>Акция:</b> закажи от <b>100&nbsp;000 ₸</b> — <b>5 кг</b> любого товара в подарок. <a href="#" id="promoLink" class="small" style="text-decoration:underline;margin-left:6px">подробнее</a></div>
+            </div>
+            <div class="search">
+              <input id="search" class="search-input" type="search" placeholder="Поиск по товарам...">
+              <button id="clearBtn" class="search-btn" aria-label="Очистить поиск">✕</button>
+            </div>
+            <div class="chips" id="chips">
+              <div class="chip ${'active'}" data-key="all">Все</div>
+              <div class="chip" data-key="available">В наличии</div>
+              <div class="chip" data-key="price_asc">Дешевле</div>
+              <div class="chip" data-key="price_desc">Дороже</div>
+            </div>
+          </div>
+        </div>
+        <div class="container">
+          <div class="grid" id="grid"></div>
+        </div>`;
+      $('#promoLink').addEventListener('click', (e)=>{ e.preventDefault(); switchTo('promos'); });
+      bindHeader(); renderGrid(filtered);
+    }
+
+    function bindHeader(){
+      const search = $('#search'); const clearBtn = $('#clearBtn');
+      if(search){ search.addEventListener('input', applyFilters); clearBtn.addEventListener('click', () => { search.value=''; applyFilters(); }); }
+      $$('#chips .chip').forEach(ch => ch.addEventListener('click', () => { activeChip=ch.dataset.key; $$('#chips .chip').forEach(c => c.classList.toggle('active', c===ch)); applyFilters(); }));
+    }
+
+    function renderGrid(items){
+      const grid = $('#grid'); if(!grid) return;
+      grid.innerHTML = '';
+      if(items.length===0){ grid.innerHTML='<div class="empty">Ничего не найдено.</div>'; return; }
+      items.forEach(p => grid.appendChild(ProductCard(p)));
+    }
+
+    function ProductCard(p){
+      const el = document.createElement('div'); el.className='card';
+      const low = p.stock <= 5; const out = p.stock <= 0;
+      const emoji = p.title.includes('Банан') ? '🍌' : (p.title.includes('Виноград') ? '🍇' : '🥕');
+      el.innerHTML = `
+        <div class="thumb">${emoji}</div>
+        <div class="card-body">
+          <div class="title" title="${p.title}">${p.title}</div>
+          <div class="meta">
+            <div>
+              <div class="price">${fmt(p.price)} ₸</div>
+              <div class="unit">за ${p.unit}</div>
+              <div class="badges">
+                ${out ? '<span class="badge low">Нет в наличии</span>' : ''}
+                ${(!out && low) ? '<span class="badge low">Мало</span>' : ''}
+                <span class="badge stock">Остаток: ${p.stock}</span>
+              </div>
+            </div>
+          </div>
+          <div class="qty">
+            <button class="btn" data-act="dec" aria-label="Уменьшить">−</button>
+            <input type="number" step="1" min="0" value="0" inputmode="numeric" aria-label="Количество">
+            <button class="btn" data-act="inc" aria-label="Увеличить">+</button>
+          </div>
+          <button class="add-btn" ${out?'disabled':''}>В корзину</button>
+        </div>`;
+      const input = el.querySelector('input');
+      el.querySelector('[data-act="dec"]').addEventListener('click', () => { input.value = Math.max(0, Number(input.value||0)-1); });
+      el.querySelector('[data-act="inc"]').addEventListener('click', () => { input.value = Number(input.value||0)+1; });
+      el.querySelector('.add-btn').addEventListener('click', () => { const qty=Number(input.value||0)||1; if(qty<=0) return; cart.set(p.id,(cart.get(p.id)||0)+qty); input.value=0; updateBottom(); toast('Добавлено в корзину'); });
+      return el;
+    }
+
+    function applyFilters(){
+      const q = ($('#search')?.value||'').trim().toLowerCase();
+      filtered = DATA.filter(p => (p.title||'').toLowerCase().includes(q));
+      if(activeChip==='available') filtered = filtered.filter(p => p.stock>0);
+      if(activeChip==='price_asc') filtered = filtered.slice().sort((a,b)=>a.price-b.price);
+      if(activeChip==='price_desc') filtered = filtered.slice().sort((a,b)=>b.price-a.price);
+      if(activeTab==='catalog') renderGrid(filtered);
+    }
+
+    // ==== CART ====
+    function renderCart(){
+      const list = buildCartRows(); const sum = cartTotal();
+      app.innerHTML = `
+        <div class="header"><div class="container"><div class="header-inner"><div class="logo"><div class="logo-badge">🛒</div><div>Ваша корзина</div></div></div></div></div>
+        <div class="container">
+          ${list.length===0 ? '<div class="empty">Корзина пуста. Перейдите в Каталог и добавьте товары.</div>' : ''}
+          <div class="list" id="cartList"></div>
+          <div style="font-weight:800;margin-top:8px">Итого: <span id="cartSum">${fmt(sum)} ₸</span></div>
+          <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap">
+            <button class="btn" id="btnCopy">Скопировать заказ</button>
+            <button class="btn" id="btnExcel">Скачать Excel (.xlsx)</button>
+            <button class="btn btn-accent" id="btnSendWA">Отправить в WhatsApp</button>
+            <button class="btn" id="btnSendEmail">Отправить на почту</button>
+          </div>
+          <div class="small muted" style="margin:6px 0 12px">Формат: Excel 2007 (.xlsx). В столбце «Кол-во» — количество заказа, столбец «Количество» пустой.</div>
+        </div>`;
+      const container = $('#cartList'); list.forEach(r => container.appendChild(r));
+      $('#btnCopy').addEventListener('click', copyOrder);
+      $('#btnExcel').addEventListener('click', ()=>{ const o=exportOrder(true); if(!o.items.length) return toast('Корзина пуста'); downloadXLSX(o); });
+      $('#btnSendWA').addEventListener('click', sendWA);
+      $('#btnSendEmail').addEventListener('click', sendEmail);
+    }
+
+    function buildCartRows(){
+      const rows=[];
+      cart.forEach((q,id)=>{ const p=DATA.find(x=>x.id===id); if(!p||q<=0) return;
+        const row=document.createElement('div'); row.className='line';
+        row.innerHTML = `
+          <div><div style="font-weight:700">${p.title}</div>
+          <div class="small muted">${fmt(p.price)} ₸ × <span data-q>${q}</span></div></div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn" data-act="dec">−</button>
+            <button class="btn" data-act="inc">+</button>
+            <button class="btn" data-act="rm" title="Удалить">✕</button>
+          </div>`;
+        row.querySelector('[data-act="dec"]').addEventListener('click', ()=>{ setQty(id,q-1); renderCart(); });
+        row.querySelector('[data-act="inc"]').addEventListener('click', ()=>{ setQty(id,q+1); renderCart(); });
+        row.querySelector('[data-act="rm"]').addEventListener('click', ()=>{ cart.delete(id); renderCart(); updateBottom(); });
+        rows.push(row);
+      });
+      return rows;
+    }
+
+    function setQty(id,qty){ if(qty<=0) cart.delete(id); else cart.set(id,qty); updateBottom(); }
+    function cartTotal(){ let s=0; cart.forEach((q,id)=>{ const p=DATA.find(x=>x.id===id); if(p&&q>0) s+=q*p.price; }); return s; }
+
+    function exportOrder(includeComment=false){
+      const items=[]; cart.forEach((q,id)=>{ const p=DATA.find(x=>x.id===id); if(p&&q>0) items.push({title:p.title,unit:p.unit,price:p.price,qty:q}); });
+      const total=items.reduce((a,i)=>a+i.price*i.qty,0);
+      const shopName=(localStorage.getItem('shopName')||$('#shopName')?.value||'').trim();
+      const shopPhone=(localStorage.getItem('shopPhone')||$('#shopPhone')?.value||'').trim();
+      const comment= includeComment ? ($('#shopComment')?.value||'').trim() : '';
+      return {shopName,shopPhone,comment,items,total};
+    }
+
+    function toText(o){
+      return ['Магазин: '+(o.shopName||'-'),'Контактный номер: '+(o.shopPhone||'-'), (o.comment?('Комментарий: '+o.comment):'')].filter(Boolean).join('\\n');
+    }
+
+    // ===== XLSX (Excel 2007) генератор (минимальный OOXML) =====
+    function strToU8(s){ return new TextEncoder().encode(s); }
+    const CRC_TABLE = (()=>{ let c,t=[]; for(let n=0;n<256;n++){ c=n; for(let k=0;k<8;k++){ c = ((c & 1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1)); } t[n]=c>>>0; } return t; })();
+    function crc32(u8){ let c=0xffffffff; for(let i=0;i<u8.length;i++){ c = CRC_TABLE[(c^u8[i])&0xff] ^ (c>>>8); } return (c^0xffffffff)>>>0; }
+    function dosDateTime(d=new Date()){
+      let dt = { time:0, date:0 };
+      dt.time = (d.getHours()<<11) | (d.getMinutes()<<5) | ((d.getSeconds()/2)|0);
+      dt.date = (((d.getFullYear()-1980)&0x7f)<<9) | ((d.getMonth()+1)<<5) | d.getDate();
+      return dt;
+    }
+    function u32le(n){ return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]); }
+    function u16le(n){ return new Uint8Array([n&255,(n>>>8)&255]); }
+    function concatU8(arrs){ let len=0; arrs.forEach(a=>len+=a.length); const out=new Uint8Array(len); let off=0; arrs.forEach(a=>{ out.set(a,off); off+=a.length; }); return out; }
+    function makeZip(files){
+      const localHeaders=[]; const centralHeaders=[]; let offset=0;
+      const dt = dosDateTime();
+      files.forEach(f=>{
+        const nameU8 = strToU8(f.name);
+        const crc = crc32(f.data);
+        const comp = f.data;
+        const local = concatU8([
+          u32le(0x04034b50),
+          u16le(20), u16le(0), u16le(0),
+          u16le(dt.time), u16le(dt.date),
+          u32le(crc), u32le(comp.length), u32le(comp.length),
+          u16le(nameU8.length), u16le(0),
+          nameU8, comp
+        ]);
+        localHeaders.push(local);
+        const central = concatU8([
+          u32le(0x02014b50),
+          u16le(20), u16le(20), u16le(0), u16le(0),
+          u16le(dt.time), u16le(dt.date),
+          u32le(crc), u32le(comp.length), u32le(comp.length),
+          u16le(nameU8.length), u16le(0), u16le(0),
+          u16le(0), u16le(0), u32le(0),
+          u32le(offset),
+          nameU8
+        ]);
+        centralHeaders.push(central);
+        offset += local.length;
+      });
+      const centralDir = concatU8(centralHeaders);
+      const end = concatU8([
+        u32le(0x06054b50), u16le(0), u16le(0),
+        u16le(files.length), u16le(files.length),
+        u32le(centralDir.length), u32le(offset),
+        u16le(0)
+      ]);
+      return new Blob([concatU8([...localHeaders, centralDir, end])], {type:'application/zip'});
+    }
+
+    function buildXLSX(o){
+      function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+      function cStr(v){ return `<c t="inlineStr"><is><t>${esc(v)}</t></is></c>`; }
+      function cNum(v){ return `<c><v>${Number(v||0)}</v></c>`; }
+
+      const sheetRows = [];
+      sheetRows.push(`<row r="1">${cStr('Магазин')}${cStr(o.shopName||'')}</row>`);
+      sheetRows.push(`<row r="2">${cStr('Контактный номер')}${cStr(o.shopPhone||'')}</row>`);
+      sheetRows.push(`<row r="3">${cStr('Комментарий')}${cStr(o.comment||'')}</row>`);
+      sheetRows.push(`<row r="4">${cStr('')}</row>`);
+
+      sheetRows.push(`<row r="5">
+        ${cStr('Номенклатура')}${cStr('Кол-во')}${cStr('Ед.')}${cStr('Цена')}${cStr('Сумма')}${cStr('Количество')}
+      </row>`);
+
+      let r = 6;
+      o.items.forEach(item=>{
+        sheetRows.push(`<row r="${r++}">
+          ${cStr(item.title)}${cNum(item.qty)}${cStr(item.unit)}${cNum(item.price)}${cNum(item.price*item.qty)}${cStr('')}
+        </row>`);
+      });
+      sheetRows.push(`<row r="${r}">${cStr('Итого')}${cStr('')}${cStr('')}${cStr('')}${cNum(o.total)}${cStr('')}</row>`);
+
+      const sheet =
+`<?xml version="1.0" encoding="UTF-8"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>
+    ${sheetRows.join('\n')}
+  </sheetData>
+</worksheet>`;
+
+      const workbook =
+`<?xml version="1.0" encoding="UTF-8"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    <sheet name="Заказ" sheetId="1" r:id="rId1"/>
+  </sheets>
+</workbook>`;
+
+      const relsRoot =
+`<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+      const relsWorkbook =
+`<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>`;
+
+      const contentTypes =
+`<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+</Types>`;
+
+      const files = [
+        {name:'[Content_Types].xml', data:strToU8(contentTypes)},
+        {name:'_rels/.rels', data:strToU8(relsRoot)},
+        {name:'xl/workbook.xml', data:strToU8(workbook)},
+        {name:'xl/_rels/workbook.xml.rels', data:strToU8(relsWorkbook)},
+        {name:'xl/worksheets/sheet1.xml', data:strToU8(sheet)}
+      ];
+      const zipBlob = makeZip(files);
+      return new File([zipBlob], `order_${new Date().toISOString().replace(/[:T]/g,'-').slice(0,19)}.xlsx`, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    }
+
+    function downloadXLSX(o){
+      const file = buildXLSX(o);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(file);
+      a.download = file.name;
+      document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+    }
+
+    // ==== ACTIONS ====
+    function copyOrder(){
+      const o=exportOrder(true);
+      const txt=['Магазин: '+(o.shopName||'-'),'Контактный номер: '+(o.shopPhone||'-'), (o.comment?('Комментарий: '+o.comment):'')].filter(Boolean).join('\\n');
+      navigator.clipboard.writeText(txt).then(()=>toast('Текст скопирован')).catch(()=>toast('Не удалось скопировать'));
+    }
+
+    async function sendWA(){
+  // BUILD: v-force-to-1 — всегда шлём на фиксированный номер
+  const FORCE_TO = "+77074708325";
+
+  const o = exportOrder(true);
+  if (!o.items.length) { toast('Корзина пуста'); return; }
+
+  // Жёстко фиксируем получателя
+  let to = FORCE_TO;
+
+  // Собираем позиции для сервера
+  const items = (o.items||[]).map(it => ({
+    name: it.title,
+    qty: Number(it.qty||0),
+    unit: String(it.unit||'шт'),
+    price: Number(it.price||0)
+  }));
+
+  const payload = {
+    to,
+    customer: o.shopName || 'Клиент',
+    phone: o.shopPhone || '',
+    comment: o.comment || '',
+    items
+  };
+
+  const API = (window.SEND_ORDER_API_URL) || 'http://127.0.0.1:3000/api/send-order';
+
+  const btn = document.querySelector('#btnCheckout') || document.querySelector('#btnSend') || document.querySelector('#sendOrderBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Отправка...'; }
+  toast('Отправляем заказ...');
+
+  fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data && data.ok) {
+      toast('Заказ отправлен ✅');
+    } else {
+      console.error('Server error:', data);
+      toast('Ошибка отправки ❌');
+      alert('Ошибка отправки: ' + (data?.error || 'unknown'));
+    }
+  })
+  .catch(e => {
+    console.error(e);
+    toast('Сеть недоступна ❌');
+    alert('Ошибка сети. Проверь, что сервер запущен (node index.js).');
+  })
+  .finally(() => {
+    if (btn) { btn.disabled = false; btn.textContent = 'Оформить'; }
+  });
+}
+
+    function sendEmail(){
+      const o=exportOrder(true); if(!o.items.length) return toast('Корзина пуста');
+      downloadXLSX(o);
+      const body=encodeURIComponent(['Магазин: '+(o.shopName||'-'),'Контактный номер: '+(o.shopPhone||'-'), (o.comment?('Комментарий: '+o.comment):'')].filter(Boolean).join('\\n'));
+      window.location.href='mailto:'+OPERATOR.email+'?subject='+encodeURIComponent('Заказ ТРАНЗИТ')+'&body='+body;
+      toast('Excel скачан — прикрепите файл в письме');
+    }
+
+    // ==== PROFILE ====
+    function renderProfile(){
+      app.innerHTML = `
+        <div class="header"><div class="container"><div class="header-inner"><div class="logo"><div class="logo-badge">👤</div><div>Профиль</div></div></div></div></div>
+        <div class="container">
+          <div class="small muted">Эти данные подставляются при оформлении заявки.</div>
+          <div style="margin-top:10px">
+            <div class="small muted">Название магазина</div>
+            <input id="profName" class="text-input" placeholder="Например: Market Ayan" value="${localStorage.getItem('shopName') || ''}"/>
+          </div>
+          <div style="margin-top:10px">
+            <div class="small muted">Контактный номер</div>
+            <input id="profPhone" class="text-input" placeholder="+7 7XX XXX XX XX" value="${localStorage.getItem('shopPhone') || ''}"/>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-accent" id="btnSaveProfile">Сохранить</button>
+          </div>
+        </div>`;
+      $('#profPhone').addEventListener('input', maskKZ);
+      $('#btnSaveProfile').addEventListener('click', ()=>{
+        localStorage.setItem('shopName',$('#profName').value.trim());
+        localStorage.setItem('shopPhone',$('#profPhone').value.trim());
+        toast('Профиль сохранён');
+      });
+    }
+
+    // ==== PROMOS ====
+    function renderPromos(){
+      app.innerHTML = `
+        <div class="header"><div class="container"><div class="header-inner"><div class="logo"><div class="logo-badge">%</div><div>Акции</div></div></div></div></div>
+        <div class="container">
+          <div class="card" style="padding:12px;margin:12px 0">
+            <div style="font-weight:800">Подарок за крупный заказ</div>
+            <div>Оформите заказ от <b>100&nbsp;000 ₸</b> — получите <b>5 кг</b> любого товара в подарок.</div>
+          </div>
+        </div>`;
+    }
+
+    // ==== COMMON ====
+    function updateBottom(){
+      let totalQty=0,totalSum=0; cart.forEach((q,id)=>{ const p=DATA.find(x=>x.id===id); if(p&&q>0){ totalQty+=q; totalSum+=q*p.price; } });
+      $('#cartCount').textContent=totalQty; $('#cartTotal').textContent=fmt(totalSum)+' ₸';
+      const visible= totalQty>0 && activeTab!=='cart'; $('#bottom').classList.toggle('hidden', !visible); $('#app').style.bottom = visible ? 'calc(140px + var(--safe-bottom))' : 'calc(64px + var(--safe-bottom))';
+    }
+
+    const modal=$('#modal'); const btnCheckout=$('#btnCheckout');
+    if(btnCheckout) btnCheckout.addEventListener('click', ()=>{ openModal(); });
+    $('#btnCancel').addEventListener('click', ()=> closeModal());
+    function openModal(){
+      $('#shopName').value=localStorage.getItem('shopName')||''; $('#shopPhone').value=localStorage.getItem('shopPhone')||'';
+      $('#shopComment').value='';
+      renderOrderList(); modal.classList.add('open'); modal.setAttribute('aria-hidden','false');
+    }
+    function closeModal(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
+    function renderOrderList(){
+      const c=$('#orderList'); c.innerHTML=''; let sum=0;
+      cart.forEach((q,id)=>{ const p=DATA.find(x=>x.id===id); if(!p||q<=0) return; const line=q*p.price; sum+=line;
+        const row=document.createElement('div'); row.className='row';
+        row.innerHTML = `<div><div style="font-weight:700">${p.title}</div><div class="small" style="color:var(--muted)">${q} × ${fmt(p.price)} ₸</div></div><div style="font-weight:800">${fmt(line)} ₸</div>`;
+        c.appendChild(row);
+      });
+      $('#modalTotal').textContent = fmt(sum)+' ₸';
+    }
+    $('#btnSend').addEventListener('click', ()=>{
+      localStorage.setItem('shopName',$('#shopName').value.trim());
+      localStorage.setItem('shopPhone',$('#shopPhone').value.trim());
+      sendWA();
+      toast('Заявка сформирована');
+      cart.clear(); updateBottom(); closeModal();
+    });
+
+    function maskKZ(e){
+      const digits = e.target.value.replace(/\D/g,'');
+      let out = '+7 '; let d = digits; if(!d.startsWith('7')) d='7'+d;
+      if(d.length>0) out += d[0];
+      if(d.length>1) out += d.slice(1,4)?' '+d.slice(1,4):'';
+      if(d.length>4) out += d.slice(4,7)?' '+d.slice(4,7):'';
+      if(d.length>7) out += d.slice(7,9)?' '+d.slice(7,9):'';
+      if(d.length>9) out += d.slice(9,11)?' '+d.slice(9,11):'';
+      e.target.value = out.trim();
+    }
+
+    function switchTo(tab){ activeTab=tab; $$('#tabs .tab').forEach(x=>x.classList.toggle('active', x.dataset.tab===tab)); renderView(); updateBottom(); }
+
+    render();
+  });
+  </script>
+</body>
+</html>
