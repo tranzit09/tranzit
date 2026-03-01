@@ -469,61 +469,33 @@
       navigator.clipboard.writeText(txt).then(()=>toast('Текст скопирован')).catch(()=>toast('Не удалось скопировать'));
     }
 
-    async function sendWA(){
-  // BUILD: v-force-to-1 — всегда шлём на фиксированный номер
-  const FORCE_TO = "+77074708325";
+function sendWA(){
+  // Номер телефона для ссылки wa.me пишется БЕЗ плюса
+  const FORCE_TO = "77074708325"; 
 
   const o = exportOrder(true);
   if (!o.items.length) { toast('Корзина пуста'); return; }
 
-  // Жёстко фиксируем получателя
-  let to = FORCE_TO;
+  // Формируем красивое текстовое сообщение для WhatsApp
+  let text = `*Новый заказ ТРАНЗИТ* 📦\n\n`;
+  text += `*Магазин:* ${o.shopName || 'Не указан'}\n`;
+  text += `*Телефон:* ${o.shopPhone || 'Не указан'}\n`;
+  if (o.comment) text += `*Комментарий:* ${o.comment}\n`;
+  text += `\n*Состав заказа:*\n`;
 
-  // Собираем позиции для сервера
-  const items = (o.items||[]).map(it => ({
-    name: it.title,
-    qty: Number(it.qty||0),
-    unit: String(it.unit||'шт'),
-    price: Number(it.price||0)
-  }));
-
-  const payload = {
-    to,
-    customer: o.shopName || 'Клиент',
-    phone: o.shopPhone || '',
-    comment: o.comment || '',
-    items
-  };
-
-  const API = (window.SEND_ORDER_API_URL) || 'http://127.0.0.1:3000/api/send-order';
-
-  const btn = document.querySelector('#btnCheckout') || document.querySelector('#btnSend') || document.querySelector('#sendOrderBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Отправка...'; }
-  toast('Отправляем заказ...');
-
-  fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
-    body: JSON.stringify(payload)
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data && data.ok) {
-      toast('Заказ отправлен ✅');
-    } else {
-      console.error('Server error:', data);
-      toast('Ошибка отправки ❌');
-      alert('Ошибка отправки: ' + (data?.error || 'unknown'));
-    }
-  })
-  .catch(e => {
-    console.error(e);
-    toast('Сеть недоступна ❌');
-    alert('Ошибка сети. Проверь, что сервер запущен (node index.js).');
-  })
-  .finally(() => {
-    if (btn) { btn.disabled = false; btn.textContent = 'Оформить'; }
+  o.items.forEach(it => {
+    // Используем вашу функцию fmt() для форматирования цен
+    text += `▫️ ${it.title} — ${it.qty} ${it.unit} (на сумму ${fmt(it.price * it.qty)} ₸)\n`;
   });
+
+  text += `\n💰 *ИТОГО: ${fmt(o.total)} ₸*`;
+
+  // Кодируем текст для URL и формируем ссылку
+  const waLink = `https://wa.me/${FORCE_TO}?text=${encodeURIComponent(text)}`;
+  
+  // Открываем WhatsApp в новой вкладке/приложении
+  window.open(waLink, '_blank');
+  toast('Открываем WhatsApp...');
 }
 
     function sendEmail(){
